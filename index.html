@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Calculadora de Tokens</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 400px;
+    margin: 2rem auto;
+    padding: 1rem;
+    background: #f5f5f5;
+    border-radius: 8px;
+  }
+  label {
+    display: block;
+    margin-top: 1rem;
+  }
+  input, select, button {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+  }
+  button {
+    margin-top: 1.5rem;
+    cursor: pointer;
+    background-color: #007BFF;
+    border: none;
+    color: white;
+    border-radius: 4px;
+  }
+  button:hover {
+    background-color: #0056b3;
+  }
+  #resultado {
+    margin-top: 1.5rem;
+    font-weight: bold;
+    font-size: 1.25rem;
+  }
+</style>
+</head>
+<body>
+
+<h2>Calculadora de Tokens (Texto e Áudio)</h2>
+
+<form id="calcForm">
+  <label for="tipoCliente">Tipo de Cliente:</label>
+  <select id="tipoCliente" required>
+    <option value="">-- Selecione --</option>
+    <option value="parceiro">Parceiro</option>
+    <option value="cliente">Cliente Final</option>
+  </select>
+
+  <label for="tokensTexto">Tokens de Texto (texto para texto):</label>
+  <input type="number" id="tokensTexto" min="0" step="1000" placeholder="Ex: 1000000" required />
+
+  <label for="minutosAudioAudio">Minutos de Áudio para Áudio:</label>
+  <input type="number" id="minutosAudioAudio" min="0" step="1" placeholder="Ex: 10" required />
+
+  <label for="minutosAudioTexto">Minutos de Áudio para Texto:</label>
+  <input type="number" id="minutosAudioTexto" min="0" step="1" placeholder="Ex: 100" required />
+
+  <button type="submit">Calcular Valor</button>
+</form>
+
+<div id="resultado"></div>
+
+<script>
+  const form = document.getElementById('calcForm');
+  const resultadoDiv = document.getElementById('resultado');
+
+  form.addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    const tipoCliente = document.getElementById('tipoCliente').value;
+    const tokensTexto = Number(document.getElementById('tokensTexto').value);
+    const minutosAudioAudio = Number(document.getElementById('minutosAudioAudio').value);
+    const minutosAudioTexto = Number(document.getElementById('minutosAudioTexto').value);
+
+    if (!tipoCliente) {
+      resultadoDiv.textContent = 'Por favor, selecione o tipo de cliente.';
+      return;
+    }
+
+    // Valores base para parceiros
+    const valorMilTokensTexto = 7.50;
+    const valor10MinAudioAudio = 7.50;
+    const valor100MinAudioTexto = 7.50;
+
+    // Calculo para parceiro
+    let valorTexto = (tokensTexto / 1_000_000) * valorMilTokensTexto;
+    let valorAudioAudio = (minutosAudioAudio / 10) * valor10MinAudioAudio;
+    let valorAudioTexto = (minutosAudioTexto / 100) * valor100MinAudioTexto;
+
+    let valorTotal = valorTexto + valorAudioAudio + valorAudioTexto;
+
+    // Se for cliente final, dobra o valor
+    if (tipoCliente === 'cliente') {
+      valorTotal *= 2;
+    }
+
+    resultadoDiv.textContent = `Valor Total: R$ ${valorTotal.toFixed(2)}`;
+  });
+</script>
+
+</body>
+</html>
