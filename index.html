@@ -79,6 +79,7 @@
     <div id="campos_audio" class="hidden">
       <label>Quantidade de Tokens:</label>
       <input type="text" id="qt_audio" placeholder="Digite a quantidade de tokens">
+      <div id="legenda_tokens_audio" class="legenda"></div>
       <label>Minutos de Áudio:</label>
       <input type="number" id="min_audio" placeholder="Digite os minutos">
       <label>Valor (R$):</label>
@@ -98,10 +99,11 @@
     const qtAudio = document.getElementById("qt_audio");
     const minAudio = document.getElementById("min_audio");
     const valorAudio = document.getElementById("valor_audio");
+    const legendaTokensAudio = document.getElementById("legenda_tokens_audio");
 
     tipo.addEventListener("change", () => {
       qtTexto.value = qtAudio.value = minAudio.value = valorTexto.value = valorAudio.value = "";
-      legendaTokens.textContent = "";
+      legendaTokens.textContent = legendaTokensAudio.textContent = "";
       if (tipo.value === "texto") {
         camposTexto.classList.remove("hidden");
         camposAudio.classList.add("hidden");
@@ -120,9 +122,16 @@
       return value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
     }
 
-    function numberToWordsPt(value) {
-      if (!window.numeralExtenso) return '';
-      return window.numeralExtenso(value);
+    function numberToWords(valor) {
+      if (valor >= 1000000) {
+        const mi = Math.floor(valor / 1000000);
+        return `${mi} ${mi === 1 ? 'milhão' : 'milhões'}`;
+      } else if (valor >= 1000) {
+        const mil = Math.floor(valor / 1000);
+        return `${mil} mil`;
+      } else {
+        return `${valor}`;
+      }
     }
 
     qtTexto.addEventListener("input", () => {
@@ -139,21 +148,6 @@
       legendaTokens.textContent = `(${quantidade.toLocaleString('pt-BR')} = ${numberToWords(quantidade)})`;
     });
 
-    function numberToWords(valor) {
-      const unidades = ['','mil','milhão','bilhão','trilhão'];
-      let texto = valor.toLocaleString('pt-BR');
-      if (valor >= 1000000) {
-        const mi = Math.floor(valor / 1000000);
-        texto = `${mi} ${mi === 1 ? 'milhão' : 'milhões'}`;
-      } else if (valor >= 1000) {
-        const mil = Math.floor(valor / 1000);
-        texto = `${mil} mil`;
-      } else {
-        texto = `${valor}`;
-      }
-      return texto;
-    }
-
     function calcAudio(tipoAudio) {
       const preco = 15;
       const minutosPorPreco = tipoAudio === "audio_audio" ? 10 : 100;
@@ -165,6 +159,7 @@
         minAudio.value = minutos.toFixed(2);
         valorAudio.value = ((minutos / minutosPorPreco) * preco).toFixed(2);
         qtAudio.value = formatNumber(tokens);
+        legendaTokensAudio.textContent = `(${tokens.toLocaleString('pt-BR')} = ${numberToWords(tokens)})`;
       });
 
       valorAudio.addEventListener("input", () => {
@@ -173,6 +168,7 @@
         const tokens = minutos * tokensPorMinuto;
         minAudio.value = minutos.toFixed(2);
         qtAudio.value = formatNumber(tokens);
+        legendaTokensAudio.textContent = `(${tokens.toLocaleString('pt-BR')} = ${numberToWords(tokens)})`;
       });
 
       minAudio.addEventListener("input", () => {
@@ -181,6 +177,7 @@
         const valor = (minutos / minutosPorPreco) * preco;
         qtAudio.value = formatNumber(tokens);
         valorAudio.value = valor.toFixed(2);
+        legendaTokensAudio.textContent = `(${tokens.toLocaleString('pt-BR')} = ${numberToWords(tokens)})`;
       });
     }
 
