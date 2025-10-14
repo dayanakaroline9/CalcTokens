@@ -12,7 +12,7 @@
       background: #eef1f4;
     }
     .container {
-      max-width: 500px;
+      max-width: 680px;
       margin: auto;
       background: #fff;
       padding: 2rem;
@@ -22,9 +22,28 @@
     h2 {
       text-align: center;
       color: #333;
+      margin-top: 0;
+    }
+    .sub {
+      margin-top: 2rem;
+      margin-bottom: .75rem;
+      font-size: 1.05rem;
+      color: #333;
+      border-top: 1px solid #eee;
+      padding-top: 1.25rem;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .form-row {
+      display: flex;
+      gap: .75rem;
+      align-items: end;
     }
     .form-group {
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.2rem;
     }
     label {
       display: block;
@@ -40,18 +59,37 @@
       font-size: 1rem;
       box-sizing: border-box;
       transition: border-color 0.2s;
+      background: #fff;
     }
     input:focus, select:focus {
       border-color: #007bff;
       outline: none;
     }
-    .hidden {
-      display: none;
-    }
+    .hidden { display: none; }
     .legenda {
       font-size: 0.9rem;
       color: #666;
       margin-top: 0.25rem;
+    }
+    .result {
+      background: #f7fafc;
+      border: 1px solid #e6edf5;
+      padding: 1rem;
+      border-radius: 10px;
+      line-height: 1.5;
+    }
+    .result strong { color: #111; }
+    .checkboxes {
+      display: flex;
+      gap: 1.25rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .inline {
+      display: grid;
+      grid-template-columns: 1fr 220px;
+      gap: .75rem;
+      align-items: end;
     }
   </style>
 </head>
@@ -59,6 +97,7 @@
   <div class="container">
     <h2>Calculadora de Tokens para IA</h2>
 
+    <!-- BLOCO ORIGINAL -->
     <div class="form-group">
       <label for="tipo">Tipo de Token:</label>
       <select id="tipo">
@@ -85,9 +124,67 @@
       <label>Valor (R$):</label>
       <input type="number" id="valor_audio" placeholder="Digite o valor em reais" step="0.01">
     </div>
+
+    <!-- NOVA SESSÃO: CONSUMO MENSAL -->
+    <h3 class="sub">Consumo Mensal (estimativa)</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="media_tokens">Média de tokens por interação</label>
+        <input type="text" id="media_tokens" value="3.500">
+        <div class="legenda">Use 3.000 a 4.000 tokens por interação, se preferir.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="interacoes">Interações por atendimento</label>
+        <input type="number" id="interacoes" min="1" value="6">
+      </div>
+
+      <div class="form-group">
+        <label for="qtd_atend">Quantidade de atendimentos</label>
+        <input type="text" id="qtd_atend" value="500">
+      </div>
+
+      <div class="form-group">
+        <label for="periodo">Período</label>
+        <select id="periodo">
+          <option value="dia">por dia</option>
+          <option value="mes">por mês</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group checkboxes">
+      <label><input type="checkbox" id="chk_transcricao"> Incluir Transcrição (Áudio → Texto)</label>
+      <label><input type="checkbox" id="chk_voz"> Incluir Voz (Texto → Áudio)</label>
+    </div>
+
+    <div id="packs_transcricao" class="form-row hidden">
+      <div class="form-group" style="flex:1">
+        <label for="pacotes_stt">Pacotes de Transcrição (1.000 min cada)</label>
+        <input type="number" id="pacotes_stt" min="0" value="0">
+        <div class="legenda">Preço usado: R$15 por 100 min ⇒ R$150 por 1.000 min</div>
+      </div>
+    </div>
+
+    <div id="packs_voz" class="form-row hidden">
+      <div class="form-group" style="flex:1">
+        <label for="pacotes_tts">Pacotes de Voz (100 min cada)</label>
+        <input type="number" id="pacotes_tts" min="0" value="0">
+        <div class="legenda">Preço usado: R$15 por 100 min</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <div class="result" id="resumo_mensal">
+        Preencha os campos acima para ver a estimativa mensal.
+      </div>
+    </div>
   </div>
 
   <script>
+    // ==========================
+    // Helpers
+    // ==========================
     const tipo = document.getElementById("tipo");
     const camposTexto = document.getElementById("campos_texto");
     const camposAudio = document.getElementById("campos_audio");
@@ -101,6 +198,51 @@
     const valorAudio = document.getElementById("valor_audio");
     const legendaTokensAudio = document.getElementById("legenda_tokens_audio");
 
+    // Nova sessão – elementos
+    const mediaTokens = document.getElementById("media_tokens");
+    const interacoes = document.getElementById("interacoes");
+    const qtdAtend = document.getElementById("qtd_atend");
+    const periodo = document.getElementById("periodo");
+    const chkTransc = document.getElementById("chk_transcricao");
+    const chkVoz = document.getElementById("chk_voz");
+    const packsTransc = document.getElementById("packs_transcricao");
+    const packsVoz = document.getElementById("packs_voz");
+    const pacotesSTT = document.getElementById("pacotes_stt");
+    const pacotesTTS = document.getElementById("pacotes_tts");
+    const resumoMensal = document.getElementById("resumo_mensal");
+
+    const PRECO_MILHAO_TOKENS = 15; // R$15 por 1.000.000 tokens (mantendo sua lógica)
+    const PRECO_100_MIN = 15;       // R$15 a cada 100 minutos (base usada no bloco de áudio)
+    const TOKENS_POR_MIN = 0.36;    // mesma base do bloco de áudio (informativo)
+
+    function parseFormattedNumber(value) {
+      if (typeof value === "number") return value;
+      return parseFloat(String(value).replace(/\./g, '').replace(',', '.')) || 0;
+    }
+
+    function formatNumber(value) {
+      return Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+
+    function numberToWords(valor) {
+      valor = Math.floor(valor);
+      if (valor >= 1_000_000_000) {
+        const bi = Math.floor(valor / 1_000_000_000);
+        return `${bi} ${bi === 1 ? 'bilhão' : 'bilhões'}`;
+      } else if (valor >= 1_000_000) {
+        const mi = Math.floor(valor / 1_000_000);
+        return `${mi} ${mi === 1 ? 'milhão' : 'milhões'}`;
+      } else if (valor >= 1000) {
+        const mil = Math.floor(valor / 1000);
+        return `${mil} mil`;
+      } else {
+        return `${valor}`;
+      }
+    }
+
+    // ==========================
+    // Bloco original (já existente)
+    // ==========================
     tipo.addEventListener("change", () => {
       qtTexto.value = qtAudio.value = minAudio.value = valorTexto.value = valorAudio.value = "";
       legendaTokens.textContent = legendaTokensAudio.textContent = "";
@@ -114,44 +256,39 @@
       }
     });
 
-    function parseFormattedNumber(value) {
-      return parseFloat(value.replace(/\./g, '').replace(',', '.')) || 0;
-    }
-
-    function formatNumber(value) {
-      return value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-    }
-
-    function numberToWords(valor) {
-      if (valor >= 1000000) {
-        const mi = Math.floor(valor / 1000000);
-        return `${mi} ${mi === 1 ? 'milhão' : 'milhões'}`;
-      } else if (valor >= 1000) {
-        const mil = Math.floor(valor / 1000);
-        return `${mil} mil`;
-      } else {
-        return `${valor}`;
-      }
-    }
-
     qtTexto.addEventListener("input", () => {
       const num = parseFormattedNumber(qtTexto.value);
-      valorTexto.value = (num / 1000000 * 15).toFixed(2);
+      valorTexto.value = (num / 1_000_000 * PRECO_MILHAO_TOKENS).toFixed(2);
       qtTexto.value = formatNumber(num);
       legendaTokens.textContent = `(${num.toLocaleString('pt-BR')} = ${numberToWords(num)})`;
+      atualizarResumoMensal(); // reflete no total se quiser somar manualmente
     });
 
     valorTexto.addEventListener("input", () => {
-      const valor = parseFloat(valorTexto.value);
-      const quantidade = Math.round(valor / 15 * 1000000);
+      const valor = parseFloat(valorTexto.value) || 0;
+      const quantidade = Math.round(valor / PRECO_MILHAO_TOKENS * 1_000_000);
       qtTexto.value = formatNumber(quantidade);
       legendaTokens.textContent = `(${quantidade.toLocaleString('pt-BR')} = ${numberToWords(quantidade)})`;
+      atualizarResumoMensal();
     });
 
     function calcAudio(tipoAudio) {
-      const preco = 15;
+      const preco = PRECO_100_MIN; // R$15 a cada 100 min
       const minutosPorPreco = tipoAudio === "audio_audio" ? 10 : 100;
-      const tokensPorMinuto = 0.36;
+      const tokensPorMinuto = TOKENS_POR_MIN;
+
+      // Remover listeners antigos clonando os nós (evita empilhar listeners)
+      const novoQtAudio = qtAudio.cloneNode(true);
+      const novoMinAudio = minAudio.cloneNode(true);
+      const novoValorAudio = valorAudio.cloneNode(true);
+      qtAudio.parentNode.replaceChild(novoQtAudio, qtAudio);
+      minAudio.parentNode.replaceChild(novoMinAudio, minAudio);
+      valorAudio.parentNode.replaceChild(novoValorAudio, valorAudio);
+
+      // Reatribui referências
+      window.qtAudio = document.getElementById("qt_audio");
+      window.minAudio = document.getElementById("min_audio");
+      window.valorAudio = document.getElementById("valor_audio");
 
       qtAudio.addEventListener("input", () => {
         const tokens = parseFormattedNumber(qtAudio.value);
@@ -160,29 +297,123 @@
         valorAudio.value = ((minutos / minutosPorPreco) * preco).toFixed(2);
         qtAudio.value = formatNumber(tokens);
         legendaTokensAudio.textContent = `(${tokens.toLocaleString('pt-BR')} = ${numberToWords(tokens)})`;
+        atualizarResumoMensal();
       });
 
       valorAudio.addEventListener("input", () => {
-        const valor = parseFloat(valorAudio.value);
+        const valor = parseFloat(valorAudio.value) || 0;
         const minutos = (valor / preco) * minutosPorPreco;
         const tokens = minutos * tokensPorMinuto;
         minAudio.value = minutos.toFixed(2);
         qtAudio.value = formatNumber(tokens);
         legendaTokensAudio.textContent = `(${tokens.toLocaleString('pt-BR')} = ${numberToWords(tokens)})`;
+        atualizarResumoMensal();
       });
 
       minAudio.addEventListener("input", () => {
-        const minutos = parseFloat(minAudio.value);
+        const minutos = parseFloat(minAudio.value) || 0;
         const tokens = minutos * tokensPorMinuto;
         const valor = (minutos / minutosPorPreco) * preco;
         qtAudio.value = formatNumber(tokens);
         valorAudio.value = valor.toFixed(2);
         legendaTokensAudio.textContent = `(${tokens.toLocaleString('pt-BR')} = ${numberToWords(tokens)})`;
+        atualizarResumoMensal();
       });
     }
 
     // Inicializa com tipo padrão
     calcAudio("audio_audio");
+
+    // ==========================
+    // NOVA SESSÃO: LÓGICA CONS. MENSAL
+    // ==========================
+    function calcularTokensMensais() {
+      const media = parseFormattedNumber(mediaTokens.value) || 0;
+      const inter = parseInt(interacoes.value || "0", 10);
+      const qtd = parseFormattedNumber(qtdAtend.value) || 0;
+      const fatorPeriodo = (periodo.value === "dia") ? 30 : 1;
+
+      // Fórmula: média_tokens * interações * atendimentos * (30 se "por dia")
+      const totalTokens = media * inter * qtd * fatorPeriodo;
+      const custoTokens = (totalTokens / 1_000_000) * PRECO_MILHAO_TOKENS;
+
+      return { totalTokens, custoTokens };
+    }
+
+    function calcularAudioExtras() {
+      // Transcrição (Áudio -> Texto) – pacotes de 1.000 min
+      const incluirSTT = chkTransc.checked;
+      const qtdPacksSTT = parseInt(pacotesSTT.value || "0", 10);
+      const custoPackSTT = 10 * PRECO_100_MIN; // 1000 min = 10 * (100 min)
+      const custoSTT = incluirSTT ? qtdPacksSTT * custoPackSTT : 0;
+
+      // Voz (Texto -> Áudio) – pacotes de 100 min
+      const incluirTTS = chkVoz.checked;
+      const qtdPacksTTS = parseInt(pacotesTTS.value || "0", 10);
+      const custoPackTTS = PRECO_100_MIN; // 100 min
+      const custoTTS = incluirTTS ? qtdPacksTTS * custoPackTTS : 0;
+
+      return { custoSTT, custoTTS, qtdPacksSTT, qtdPacksTTS, incluirSTT, incluirTTS };
+    }
+
+    function atualizarResumoMensal() {
+      const { totalTokens, custoTokens } = calcularTokensMensais();
+      const { custoSTT, custoTTS, qtdPacksSTT, qtdPacksTTS, incluirSTT, incluirTTS } = calcularAudioExtras();
+      const custoTotal = custoTokens + custoSTT + custoTTS;
+
+      const tokensFmt = totalTokens.toLocaleString('pt-BR');
+      const tokensExtenso = numberToWords(totalTokens);
+      const custoTokensFmt = custoTokens.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const custoSTTFmt = custoSTT.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const custoTTSFmt = custoTTS.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const custoTotalFmt = custoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      let extras = '';
+      if (incluirSTT) extras += `<br>• Transcrição: ${qtdPacksSTT} × (1.000 min) = <strong>R$ ${custoSTTFmt}</strong>`;
+      if (incluirTTS) extras += `<br>• Voz: ${qtdPacksTTS} × (100 min) = <strong>R$ ${custoTTSFmt}</strong>`;
+
+      resumoMensal.innerHTML = `
+        <strong>Tokens/mês (estimado):</strong> ${tokensFmt} (<em>${tokensExtenso}</em>)<br>
+        <strong>Custo de tokens:</strong> R$ ${custoTokensFmt}
+        ${extras || ''}
+        <hr style="border:none;border-top:1px solid #e6edf5;margin:.75rem 0;">
+        <strong>Total estimado/mês:</strong> R$ ${custoTotalFmt}
+        <div class="legenda" style="margin-top:.5rem">
+          Fórmula: média_tokens × interações × atendimentos × período${periodo.value === 'dia' ? ' (×30)' : ''}.
+          Preços usados: R$15/M tokens; R$15/100 min (áudio).
+        </div>
+      `;
+    }
+
+    // Eventos da nova sessão
+    [mediaTokens, interacoes, qtdAtend].forEach(el => {
+      el.addEventListener('input', () => {
+        if (el === mediaTokens || el === qtdAtend) {
+          // manter máscara BR (1.000, 3.500 etc.)
+          const raw = parseFormattedNumber(el.value);
+          el.value = raw ? formatNumber(raw) : '';
+        }
+        atualizarResumoMensal();
+      });
+    });
+
+    periodo.addEventListener('change', atualizarResumoMensal);
+
+    chkTransc.addEventListener('change', () => {
+      packsTransc.classList.toggle('hidden', !chkTransc.checked);
+      atualizarResumoMensal();
+    });
+
+    chkVoz.addEventListener('change', () => {
+      packsVoz.classList.toggle('hidden', !chkVoz.checked);
+      atualizarResumoMensal();
+    });
+
+    pacotesSTT.addEventListener('input', atualizarResumoMensal);
+    pacotesTTS.addEventListener('input', atualizarResumoMensal);
+
+    // Inicializa resumo
+    atualizarResumoMensal();
   </script>
 </body>
 </html>
