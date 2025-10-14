@@ -170,7 +170,7 @@
       <div class="form-group" style="flex:1">
         <label for="pacotes_tts">Pacotes de Voz (100 min cada)</label>
         <input type="number" id="pacotes_tts" min="0" value="0">
-        <div class="legenda">Preço usado: R$15 por 100 min</div>
+        <div class="legenda">Preço usado: R$150 por 100 min</div>
       </div>
     </div>
 
@@ -346,15 +346,16 @@
       const qtdPacksSTT = parseInt(pacotesSTT.value || "0", 10);
       const custoPackSTT = 10 * PRECO_100_MIN; // 1000 min = 10 * (100 min)
       const custoSTT = incluirSTT ? qtdPacksSTT * custoPackSTT : 0;
-
+    
       // Voz (Texto -> Áudio) – pacotes de 100 min
       const incluirTTS = chkVoz.checked;
       const qtdPacksTTS = parseInt(pacotesTTS.value || "0", 10);
-      const custoPackTTS = PRECO_100_MIN; // 100 min
+      const custoPackTTS = 150; // <<< alterado aqui: R$150 por pacote de 100 min
       const custoTTS = incluirTTS ? qtdPacksTTS * custoPackTTS : 0;
-
+    
       return { custoSTT, custoTTS, qtdPacksSTT, qtdPacksTTS, incluirSTT, incluirTTS };
     }
+
 
     function atualizarResumoMensal() {
       const { totalTokens, custoTokens } = calcularTokensMensais();
